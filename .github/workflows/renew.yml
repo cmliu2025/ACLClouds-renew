@@ -28,28 +28,49 @@ jobs:
           pip install playwright
           playwright install chromium
 
-      - name: Install proxychains
-        run: sudo apt-get install -y proxychains4
-
-      - name: Run Renew Script
+      - name: Setup redsocks proxy
         env:
-          ACL_COOKIES: ${{ secrets.ACL_COOKIES }}
           PROXY_HOST: ${{ secrets.PROXY_HOST }}
           PROXY_PORT: ${{ secrets.PROXY_PORT }}
           PROXY_USER: ${{ secrets.PROXY_USER }}
           PROXY_PASS: ${{ secrets.PROXY_PASS }}
         run: |
           if [ -n "$PROXY_HOST" ] && [ -n "$PROXY_PORT" ]; then
-            echo "strict_chain" > proxychains.conf
-            echo "proxy_dns" >> proxychains.conf
-            echo "[ProxyList]" >> proxychains.conf
-            echo "socks5 $PROXY_HOST $PROXY_PORT $PROXY_USER $PROXY_PASS" >> proxychains.conf
-            echo "使用代理: $PROXY_HOST:$PROXY_PORT"
-            proxychains4 -f proxychains.conf python renew.py
+            sudo apt-get install -y redsocks
+            cat > /tmp/redsocks.conf << EOF
+          base {
+            log_debug = off;
+            log_info = on;
+            log = "file:/tmp/redsocks.log";
+            daemon = on;
+            redirector = iptables;
+          }
+          redsocks {
+            local_ip = 127.0.0.1;
+            local_port = 12345;
+            ip = $PROXY_HOST;
+            port = $PROXY_PORT;
+            type = socks5;
+            login = "$PROXY_USER";
+            password = "$PROXY_PASS";
+          }
+          EOF
+            sudo redsocks -c /tmp/redsocks.conf
+            sudo iptables -t nat -N REDSOCKS
+            sudo iptables -t nat -A REDSOCKS -d 0.0.0.0/8 -j RETURN
+            sudo iptables -t nat -A REDSOCKS -d 127.0.0.0/8 -j RETURN
+            sudo iptables -t nat -A REDSOCKS -d 10.0.0.0/8 -j RETURN
+            sudo iptables -t nat -A REDSOCKS -p tcp -j REDIRECT --to-ports 12345
+            sudo iptables -t nat -A OUTPUT -p tcp -j REDSOCKS
+            echo "代理已启动: $PROXY_HOST:$PROXY_PORT"
           else
             echo "未配置代理，直连"
-            python renew.py
           fi
+
+      - name: Run Renew Script
+        env:
+          ACL_COOKIES: ${{ secrets.ACL_COOKIES }}
+        run: python renew.py
 
       - name: Keep Repo Active
         run: |
