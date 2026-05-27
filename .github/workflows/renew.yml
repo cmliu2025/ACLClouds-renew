@@ -73,6 +73,15 @@ jobs:
           ACL_COOKIES: ${{ secrets.ACL_COOKIES }}
         run: python renew.py
 
+      - name: Stop proxy
+        if: always()
+        run: |
+          sudo iptables -t nat -F OUTPUT 2>/dev/null || true
+          sudo iptables -t nat -F REDSOCKS 2>/dev/null || true
+          sudo iptables -t nat -X REDSOCKS 2>/dev/null || true
+          sudo pkill redsocks 2>/dev/null || true
+          echo "代理已停止"
+
       - name: Keep Repo Active
         run: |
           git config user.name "github-actions[bot]"
