@@ -16,10 +16,7 @@ def parse_expires_minutes(text):
     return total
 
 def run(playwright):
-    browser = playwright.chromium.launch(
-        headless=True,
-        args=['--no-sandbox', '--disable-gpu']
-    )
+    browser = playwright.chromium.launch(headless=True)
     context = browser.new_context(
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     )
@@ -90,7 +87,7 @@ def run(playwright):
             page.goto(url, timeout=60000)
             page.wait_for_timeout(3000)
 
-            # --- 情况A：详情页显示暂停 ---
+            # --- 情况A：详情页显示暂停，有 Renouveler maintenant ---
             try:
                 suspended_btn = page.locator('button:has-text("Renouveler maintenant")')
                 if suspended_btn.is_visible(timeout=3000):
@@ -113,7 +110,7 @@ def run(playwright):
             except Exception as e:
                 log(f"无法读取剩余时间: {e}")
 
-            # --- 情况B：剩余 ≤150 分钟时续期 ---
+            # --- 情况B：剩余 ≤150 分钟时续期（含延时缓冲） ---
             if remaining is not None and remaining <= 150:
                 log("剩余时间不足2.5h，尝试续期...")
                 try:
