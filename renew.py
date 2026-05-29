@@ -44,6 +44,7 @@ def run(playwright):
         log("正在访问项目面板...")
         page.goto("https://dash.aclclouds.com/projects", timeout=60000)
         page.wait_for_timeout(5000)
+        page.screenshot(path="01_projects.png", full_page=True)
 
         # ============ 2. 列表页处理暂停的服务器 ============
         try:
@@ -77,6 +78,7 @@ def run(playwright):
 
         if len(hrefs) == 0:
             log("未找到任何服务器，Cookie 可能已过期，请更新")
+            page.screenshot(path="error_no_server.png", full_page=True)
             return
 
         # ============ 4. 逐个处理服务器 ============
@@ -86,6 +88,7 @@ def run(playwright):
 
             page.goto(url, timeout=60000)
             page.wait_for_timeout(3000)
+            page.screenshot(path=f"server_{idx+1}_01_enter.png", full_page=True)
 
             # --- 情况A：详情页显示暂停 ---
             try:
@@ -97,6 +100,7 @@ def run(playwright):
                     log("暂停续期完成")
                     page.goto(url, timeout=60000)
                     page.wait_for_timeout(3000)
+                    page.screenshot(path=f"server_{idx+1}_02_suspended_renew.png", full_page=True)
             except PlaywrightTimeout:
                 pass
 
@@ -132,6 +136,8 @@ def run(playwright):
             else:
                 log(f"剩余时间充足（{remaining}min），无需续期")
 
+            page.screenshot(path=f"server_{idx+1}_02_after_renew.png", full_page=True)
+
             # --- 开机检查 ---
             try:
                 start_btn = page.locator('button:has-text("Start")').first
@@ -146,10 +152,14 @@ def run(playwright):
             except PlaywrightTimeout:
                 log("开机操作超时")
 
+            page.screenshot(path=f"server_{idx+1}_03_final.png", full_page=True)
+            page.wait_for_timeout(2000)
+
         log("全部服务器处理完成")
 
     except Exception as e:
         log(f"执行过程中发生错误: {e}")
+        page.screenshot(path="error_page.png", full_page=True)
     finally:
         browser.close()
 
