@@ -1,7 +1,7 @@
 name: ACLClouds Auto Renew
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 */12 * * *'
   workflow_dispatch:
 
 jobs:
@@ -32,6 +32,14 @@ jobs:
         env:
           ACL_COOKIES: ${{ secrets.ACL_COOKIES }}
         run: python renew.py
+
+      - name: Upload Screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Screenshots-${{ github.run_number }}
+          path: "*.png"
+          retention-days: 1
 
       - name: Keep Repo Active
         run: |
